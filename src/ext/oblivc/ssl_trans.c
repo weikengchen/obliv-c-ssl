@@ -131,22 +131,49 @@ static const ssl2PTransport ssl2PProfiledTransportTemplate
 * This is to allow in one program multiple instances of Obliv-C can be invoked with different parties in different PSK.
 */
 typedef struct _ssl_key_dictionary {
-  struct _ssl_key_dictionary_linked_list *next;
+  struct _ssl_key_dictionary *next;
   char identity[40];
   unsigned char key[16];
 } ssl_key_dictionary;
 
-unsigned char* ssl_key_dictionary_search(char *target_identity){
-  
+ssl_key_dictionary *ssl_key_dictionary_head = NULL;
+
+unsigned char* ssl_key_dictionary_search(ssl_key_dictionary *head, char *target_identity){
+  ssl_key_dictionary *cur = head;
+
+  while(cur != NULL) {
+    if(strcmp(cur->identity, target_identity) == 0){
+      return cur->key;
+    }
+  }
+
+  return NULL;
+}
+
+ssl_key_dictionary* ssl_key_dictionary_insert(ssl_key_dictionary *head, char *new_identity, unsigned char *new_key){
+  ssl_key_dictionary *new_cur = (ssl_key_dictionary*) malloc(sizeof(ssl_key_dictionary));
+
+  if(new_cur == NULL) {
+    LOG_ERROR("Cannot allocate space for the linked list.");
+    exit(EXIT_FAILURE);
+  }
+
+  new_cur->next = head;
+  strcpy(new_cur->identity, new_identity);
+  memcpy(new_cur->key, key, 16);
+
+  return new_cur;
 }
 
 unsigned int ssl_server_callback(SSL *ssl, const char *identity, unsigned char *psk, int max_psk_len){
-  if(strcmp(identity, SSL_PSK_IDENTITY)){
-    LOG_ERROR("Client_identity does not match");
-    return 0;
+  unsigned char *key = ssl_key_dictionary_search(ssl_key_dictionary_head, identity);
+
+  if(key == NULL) {
+    LOG_ERROR("Cannot find the key for this identity (IP address).");
+    exit(EXIT_FAILURE);
   }
 
-
+  
 }
 
 void ssl_library_init(){
