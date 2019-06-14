@@ -447,7 +447,6 @@ let no_parse_pragma =
              | "TCS_align"
 	     | "mark"
 
-
 rule initial =
 	parse 	"/*"			{ let il = comment lexbuf in
 	                                  let sl = intlist_to_string il in
