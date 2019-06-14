@@ -117,6 +117,7 @@ let init_lexicon _ =
     (fun (key, builder) -> H.add lexicon key builder)
     [ ("auto", fun loc -> AUTO loc);
       ("obliv", fun loc -> OBLIV loc);
+      ("_Noreturn", fun loc -> NORETURN loc);
       ("frozen", fun loc -> FROZEN loc);
       ("const", fun loc -> CONST loc);
       ("__const", fun loc -> CONST loc);
