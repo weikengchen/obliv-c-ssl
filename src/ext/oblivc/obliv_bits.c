@@ -654,7 +654,7 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    SSL_CTX_set_security_level(ctx, 0);
+    SSL_CTX_set_security_level(saved_ctx, 0);
 
     SSL_CTX_set_psk_client_callback(saved_ctx, ssl_psk_client_callback);
   }
