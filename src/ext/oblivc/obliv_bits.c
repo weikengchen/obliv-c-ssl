@@ -754,8 +754,10 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
 
-  if(!BIO_set_buffer_size(SSL_get_wbio(ssl), 65536)){
+  if(!BIO_set_write_buffer_size(SSL_get_wbio(ssl), 65536)){
     LOG_ERROR("Failed to set the write buffer to 64KB.");
+
+    printf("The wbio object is %p", SSL_get_wbio(ssl));
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
 
@@ -768,8 +770,10 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  if(!BIO_set_buffer_size(SSL_get_rbio(ssl), 65536)){
+  if(!BIO_set_read_buffer_size(SSL_get_rbio(ssl), 65536)){
     LOG_ERROR("Failed to set the read buffer to 64KB.");
+
+    printf("The rbio object is %p", SSL_get_wbio(ssl));
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
 
@@ -866,7 +870,7 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
 
-  if(!BIO_set_buffer_size(SSL_get_wbio(ssl), 65536)){
+  if(!BIO_set_write_buffer_size(SSL_get_wbio(ssl), 65536)){
     LOG_ERROR("Failed to set the write buffer to 64KB.");
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
@@ -880,7 +884,7 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  if(!BIO_set_buffer_size(SSL_get_rbio(ssl), 65536)){
+  if(!BIO_set_read_buffer_size(SSL_get_rbio(ssl), 65536)){
     LOG_ERROR("Failed to set the read buffer to 64KB.");
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
