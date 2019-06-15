@@ -757,6 +757,12 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
 
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
     return -1;
   }
 
@@ -829,8 +835,18 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
 
   printf("Prepare to do the handshake.\n");
 
-  if(SSL_do_handshake(ssl) != 1){
+  int error = SSL_do_handshake(ssl);
+  if(error != 1){
     LOG_ERROR("Handshake failed");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
     return -1;
   }
 
