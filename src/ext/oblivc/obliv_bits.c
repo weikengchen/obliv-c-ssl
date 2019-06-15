@@ -550,6 +550,8 @@ unsigned int ssl_psk_server_callback(SSL *ssl, const char *identity, unsigned ch
   char *found_my_identity;
   unsigned char *found_key;
 
+  printf("Someone asks me for a key for the identity %s\n", identity);
+
   ssl_key_dictionary_search(ssl_key_dictionary_head, identity, &found_my_identity, &found_key);
 
   if(found_key == NULL) {
@@ -567,6 +569,8 @@ unsigned int ssl_psk_server_callback(SSL *ssl, const char *identity, unsigned ch
 unsigned int ssl_psk_client_callback(SSL *ssl, const char *hint, char *identity, unsigned int max_identity_len, unsigned char *psk, unsigned int max_psk_len){
   char *found_my_identity;
   unsigned char *found_key;
+
+  printf("Someone gives me a hint %s\n", hint);
 
   // hint is the server's address
   ssl_key_dictionary_search(ssl_key_dictionary_head, hint, &found_my_identity, &found_key);
@@ -747,8 +751,12 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
 
   printf("Prepare to do the handshake.\n");
 
-  if(SSL_do_handshake(ssl) != 1){
+  int error = SSL_do_handshake(ssl);
+  if(error != 1){
     LOG_ERROR("Handshake failed");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
     return -1;
   }
 
