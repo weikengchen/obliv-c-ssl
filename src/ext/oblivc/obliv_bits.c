@@ -17,6 +17,7 @@
 #include <gcrypt.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/bio.h>
 #include <arpa/inet.h>
 
 // Q: What's with all these casts to and from void* ?
