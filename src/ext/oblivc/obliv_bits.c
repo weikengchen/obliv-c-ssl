@@ -772,6 +772,16 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
 
   printf("Handshake done.\n");
 
+  if(!BIO_set_buffer_size(SSL_get_wbio(ssl, 65536))){
+    LOG_ERROR("Failed to set the write buffer to 64KB.");
+    return -1;
+  }
+
+  if(!BIO_set_buffer_size(SSL_get_rbio(ssl, 65536))){
+    LOG_ERROR("Failed to set the read buffer to 64KB.");
+    return -1;
+  }
+
   protocolUseSSL2P(pd, sock, ctx, ssl, true, isProfiled);
   return 0;
 }
@@ -855,6 +865,16 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
   }
 
   printf("Handshake done.\n");
+
+  if(!BIO_set_buffer_size(SSL_get_wbio(ssl, 65536))){
+    LOG_ERROR("Failed to set the write buffer to 64KB.");
+    return -1;
+  }
+
+  if(!BIO_set_buffer_size(SSL_get_rbio(ssl, 65536))){
+    LOG_ERROR("Failed to set the read buffer to 64KB.");
+    return -1;
+  }
 
   protocolUseSSL2P(pd, sock, ctx, ssl, false, isProfiled);
   close(listenSock);
