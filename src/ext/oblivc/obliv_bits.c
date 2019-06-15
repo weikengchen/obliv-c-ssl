@@ -510,6 +510,7 @@ void ssl_key_dictionary_search(ssl_key_dictionary *head, const char *target_othe
       *found_key = cur->key;
       return;
     }
+    cur = cur->next;
   }
 
   *found_my_identity = NULL;
@@ -696,6 +697,8 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
   const int one = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
+  printf("Client is ready to send the IP information.\n");
+
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
   memset(sa_info, 0, INET_ADDRSTRLEN);
@@ -707,6 +710,8 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
   send(sock, sa_info, INET_ADDRSTRLEN, 0);
   send(sock, &sa.sin_port, sizeof(unsigned short), 0);
 
+  printf("Server sends the IP information to the client.\n");
+
   char my_sa_info[INET_ADDRSTRLEN];
   unsigned short my_port;
 
@@ -714,27 +719,40 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
   recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
   recv(sock, &my_port, sizeof(unsigned short), 0);
 
+  printf("Server receives the IP information from the client.\n");
+
   char other_identity[30];
   char my_identity[30];
 
   sprintf(other_identity, "%s:%d", sa_info, sa.sin_port);
   sprintf(my_identity, "%s:%d", my_sa_info, my_port);
 
+  printf("Client's identity: %s\n", other_identity);
+  printf("Server's identity: %s\n", my_identity);
+
   // add the key into the directory
   ssl_key_dictionary_head = ssl_key_dictionary_suggest(ssl_key_dictionary_head, other_identity, my_identity, key);
+
+  printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
   ssl_library_init();
   SSL_CTX * ctx = ssl_client_get_ctx();
 
+  printf("Created the SSL context.\n");
+
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
+
+  printf("Prepare to do the handshake.\n");
 
   if(SSL_do_handshake(ssl) != 1){
     LOG_ERROR("Handshake failed");
     return -1;
   }
+
+  printf("Handshake done.\n");
 
   protocolUseSSL2P(pd, sock, ctx, ssl, true, isProfiled);
   return 0;
@@ -747,6 +765,8 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
 
   const int one = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+
+  printf("Server accepts a connection from the client, now sending the IP information.\n");
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -764,6 +784,8 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
   send(sock, sa_info, INET_ADDRSTRLEN, 0);
   send(sock, &client_sa.sin_port, sizeof(unsigned short), 0);
 
+  printf("Server sends the IP information to the client.\n");
+
   char my_sa_info[INET_ADDRSTRLEN];
   unsigned short my_port;
 
@@ -771,27 +793,40 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
   recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
   recv(sock, &my_port, sizeof(unsigned short), 0);
 
+  printf("Server receives the IP information from the client.\n");
+
   char other_identity[30];
   char my_identity[30];
 
   sprintf(other_identity, "%s:%d", sa_info, client_sa.sin_port);
   sprintf(my_identity, "%s:%d", my_sa_info, my_port);
 
+  printf("Client's identity: %s\n", other_identity);
+  printf("Server's identity: %s\n", my_identity);
+
   // add the key into the directory
   ssl_key_dictionary_head = ssl_key_dictionary_suggest(ssl_key_dictionary_head, other_identity, my_identity, key);
+
+  printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
   ssl_library_init();
   SSL_CTX * ctx = ssl_server_get_ctx(my_identity);
 
+  printf("Created the SSL context.\n");
+
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
+
+  printf("Prepare to do the handshake.\n");
 
   if(SSL_do_handshake(ssl) != 1){
     LOG_ERROR("Handshake failed");
     return -1;
   }
+
+  printf("Handshake done.\n");
 
   protocolUseSSL2P(pd, sock, ctx, ssl, false, isProfiled);
   close(listenSock);
