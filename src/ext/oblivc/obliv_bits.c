@@ -747,46 +747,9 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
   // start to initialize the SSL connection
   ssl_library_init();
   SSL_CTX * ctx = ssl_client_get_ctx();
-
-  printf("Created the SSL context.\n");
-
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
-
-  if(!BIO_set_write_buffer_size(SSL_get_wbio(ssl), 65536)){
-    LOG_ERROR("Failed to set the write buffer to 64KB.");
-
-    printf("The wbio object is %p", SSL_get_wbio(ssl));
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
-
-    char error_string[256];
-    int err_in_queue;
-    while(err_in_queue = ERR_get_error()){
-      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
-    }
-
-    return -1;
-  }
-
-  if(!BIO_set_read_buffer_size(SSL_get_rbio(ssl), 65536)){
-    LOG_ERROR("Failed to set the read buffer to 64KB.");
-
-    printf("The rbio object is %p", SSL_get_wbio(ssl));
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
-
-    char error_string[256];
-    int err_in_queue;
-    while(err_in_queue = ERR_get_error()){
-      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
-    }
-
-    return -1;
-  }
-
-  printf("Prepare to do the handshake.\n");
 
   int error = SSL_do_handshake(ssl);
   if(error != 1){
@@ -802,8 +765,6 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
 
     return -1;
   }
-
-  printf("Handshake done.\n");
 
   protocolUseSSL2P(pd, sock, ctx, ssl, true, isProfiled);
   return 0;
@@ -869,34 +830,6 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
-
-  if(!BIO_set_write_buffer_size(SSL_get_wbio(ssl), 65536)){
-    LOG_ERROR("Failed to set the write buffer to 64KB.");
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
-
-    char error_string[256];
-    int err_in_queue;
-    while(err_in_queue = ERR_get_error()){
-      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
-    }
-
-    return -1;
-  }
-
-  if(!BIO_set_read_buffer_size(SSL_get_rbio(ssl), 65536)){
-    LOG_ERROR("Failed to set the read buffer to 64KB.");
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, 0));
-
-    char error_string[256];
-    int err_in_queue;
-    while(err_in_queue = ERR_get_error()){
-      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
-    }
-
-    return -1;
-  }
 
   printf("Prepare to do the handshake.\n");
 
