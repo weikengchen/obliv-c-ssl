@@ -650,7 +650,7 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    if(!SSL_CTX_set_cipher_list(saved_ctx, "PSK-NULL-SHA256:@SECLEVEL=0")) {
+    if(!SSL_CTX_set_cipher_list(saved_ctx, "PSK-NULL-SHA:@SECLEVEL=0")) {
       LOG_ERROR("Failed to set cipher list for TLS");
       exit(EXIT_FAILURE);
     }
