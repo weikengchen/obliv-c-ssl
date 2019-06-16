@@ -605,7 +605,7 @@ void ssl_library_init(){
 SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
   SSL_CTX *ctx;
 
-  const SSL_METHOD * method = TLSv1_method();
+  const SSL_METHOD * method = TLS_method();
   if(!method) {
     LOG_ERROR("Failed to create method");
     exit(EXIT_FAILURE);
@@ -617,7 +617,7 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     exit(EXIT_FAILURE);
   }
 
-  if(!SSL_CTX_set_cipher_list(ctx, "PSK-NULL-SHA:@SECLEVEL=0")) {
+  if(!SSL_CTX_set_cipher_list(ctx, "TLS_AES_128_GCM_SHA256")) {
     LOG_ERROR("Failed to set cipher list for TLS");
     exit(EXIT_FAILURE);
   }
@@ -626,8 +626,6 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     LOG_ERROR("Failed to set the SSL hint to be this party's IP address");
     exit(EXIT_FAILURE);
   }
-
-  SSL_CTX_set_security_level(ctx, 0);
 
   SSL_CTX_set_psk_server_callback(ctx, ssl_psk_server_callback);
 
@@ -638,7 +636,7 @@ SSL_CTX* ssl_client_get_ctx(){
   static SSL_CTX *saved_ctx = NULL;
 
   if(saved_ctx == NULL){
-    const SSL_METHOD * method = TLSv1_method();
+    const SSL_METHOD * method = TLS_method();
     if(!method) {
       LOG_ERROR("Failed to create method");
       exit(EXIT_FAILURE);
@@ -650,12 +648,10 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    if(!SSL_CTX_set_cipher_list(saved_ctx, "PSK-NULL-SHA:@SECLEVEL=0")) {
+    if(!SSL_CTX_set_cipher_list(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
       LOG_ERROR("Failed to set cipher list for TLS");
       exit(EXIT_FAILURE);
     }
-
-    SSL_CTX_set_security_level(saved_ctx, 0);
 
     SSL_CTX_set_psk_client_callback(saved_ctx, ssl_psk_client_callback);
   }
