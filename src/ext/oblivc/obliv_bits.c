@@ -617,8 +617,8 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     exit(EXIT_FAILURE);
   }
 
-  if(!SSL_CTX_set_cipher_list(ctx, "TLS_AES_128_GCM_SHA256")) {
-    LOG_ERROR("Failed to set cipher list for TLS");
+  if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
+    LOG_ERROR("Failed to set cipher suite for TLS");
     exit(EXIT_FAILURE);
   }
 
@@ -648,8 +648,8 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    if(!SSL_CTX_set_cipher_list(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
-      LOG_ERROR("Failed to set cipher list for TLS");
+    if(!SSL_CTX_set_ciphersuites(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
+      LOG_ERROR("Failed to set cipher suite for TLS");
       exit(EXIT_FAILURE);
     }
 
