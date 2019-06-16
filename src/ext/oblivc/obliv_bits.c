@@ -617,10 +617,10 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     exit(EXIT_FAILURE);
   }
 
-  /*if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
+  if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
     LOG_ERROR("Failed to set cipher suite for TLS");
     exit(EXIT_FAILURE);
-  }*/
+  }
 
   if(!SSL_CTX_use_psk_identity_hint(ctx, my_ip_address)) {
     LOG_ERROR("Failed to set the SSL hint to be this party's IP address");
@@ -648,10 +648,10 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    /*if(!SSL_CTX_set_ciphersuites(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
+    if(!SSL_CTX_set_ciphersuites(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
       LOG_ERROR("Failed to set cipher suite for TLS");
       exit(EXIT_FAILURE);
-    }*/
+    }
 
     SSL_CTX_set_psk_client_callback(saved_ctx, ssl_psk_client_callback);
   }
