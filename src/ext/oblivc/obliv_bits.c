@@ -617,7 +617,7 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     exit(EXIT_FAILURE);
   }
 
-  if(!SSL_CTX_set_cipher_list(ctx, "PSK-NULL-SHA256:@SECLEVEL=0")) {
+  if(!SSL_CTX_set_cipher_list(ctx, "PSK-NULL-SHA:@SECLEVEL=0")) {
     LOG_ERROR("Failed to set cipher list for TLS");
     exit(EXIT_FAILURE);
   }
