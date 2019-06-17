@@ -545,7 +545,7 @@ int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t iden
   }
 
 	SSL_SESSION *newsess = SSL_SESSION_new();
-	SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
+	const SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
 
 	if(newsess == NULL
 		|| cipher == NULL
