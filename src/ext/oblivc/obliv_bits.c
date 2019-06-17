@@ -707,8 +707,15 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   if(getsockaddr(server, port, (struct sockaddr*)&sa) < 0) return -1; // dns error
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
-  const int one = 1;
-  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+  //const int one = 1;
+  //setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+
+  int winsize = 32 * 1024 * 1024;
+  fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
+
+  fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -734,6 +741,22 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   tls_library_init();
   SSL_CTX * ctx = tls_client_get_ctx();
   SSL *ssl = SSL_new(ctx);
+
+  BIO* rbio_with_buf = BIO_new(BIO_s_mem());
+  BIO* wbio_with_buf = BIO_new(BIO_s_mem());
+
+  if(rbio_with_buf == NULL
+    || wbio_with_buf == NULL
+    || BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
+    || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
+    || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
+  ){
+    TLS_LOG_ERROR("Failed to bind a buffer to the SSL socket");
+    return -1;
+  }
+
+  SSL_set_bio(rbio_with_buf, wbio_with_buf);
+
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
 
@@ -770,8 +793,15 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   listenSock = tcpListenAny(port);
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
 
-  const int one = 1;
-  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+//  const int one = 1;
+//  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+
+  int winsize = 32 * 1024 * 1024;
+  fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
+
+  fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -802,6 +832,22 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   tls_library_init();
   SSL_CTX * ctx = tls_server_get_ctx();
   SSL *ssl = SSL_new(ctx);
+
+  BIO* rbio_with_buf = BIO_new(BIO_s_mem());
+  BIO* wbio_with_buf = BIO_new(BIO_s_mem());
+
+  if(rbio_with_buf == NULL
+    || wbio_with_buf == NULL
+    || BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
+    || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
+    || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
+  ){
+    TLS_LOG_ERROR("Failed to bind a buffer to the SSL socket");
+    return -1;
+  }
+
+  SSL_set_bio(rbio_with_buf, wbio_with_buf);
+
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
 
