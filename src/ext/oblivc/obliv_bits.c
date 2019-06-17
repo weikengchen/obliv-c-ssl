@@ -708,7 +708,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
   int fl;
-  int winsize = 1024;
+  int winsize = 65536;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
@@ -809,7 +809,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
 
   int fl;
-  int winsize = 1024;
+  int winsize = 65536;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
