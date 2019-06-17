@@ -707,16 +707,13 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   if(getsockaddr(server, port, (struct sockaddr*)&sa) < 0) return -1; // dns error
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
-  const int one = 1;
-  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-  /*int fl;
-  int winsize = 32 * 1024 * 1024;
+  int fl;
+  int winsize = 24 * 1024 * 1024;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
-  if (fl<0) { printf("set_up_socket:setsockopt");  }*/
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -811,16 +808,13 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   listenSock = tcpListenAny(port);
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
 
-  const int one = 1;
-  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-  /*int fl;
-  int winsize = 32 * 1024 * 1024;
+  int fl;
+  int winsize = 24 * 1024 * 1024;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
-  if (fl<0) { printf("set_up_socket:setsockopt");  }*/
+  if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
