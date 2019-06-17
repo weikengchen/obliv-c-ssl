@@ -743,8 +743,8 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL_CTX * ctx = tls_client_get_ctx();
   SSL *ssl = SSL_new(ctx);
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_mem());
-  BIO* wbio_with_buf = BIO_new(BIO_s_mem());
+  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
     TLS_LOG_ERROR("Failed to create the BIO");
@@ -852,8 +852,8 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   SSL_CTX * ctx = tls_server_get_ctx();
   SSL *ssl = SSL_new(ctx);
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_mem());
-  BIO* wbio_with_buf = BIO_new(BIO_s_mem());
+  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
     TLS_LOG_ERROR("Failed to create the BIO");
