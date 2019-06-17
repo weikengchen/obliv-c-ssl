@@ -583,8 +583,8 @@ int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id
     return 0;
   }
 
-  *id = my_identity;
-  *idlen = strlen(my_identity);
+  *id = tls_my_identity;
+  *idlen = strlen(tls_my_identity);
 
   SSL_SESSION *newsess = SSL_SESSION_new();
 	const SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
@@ -737,7 +737,6 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
-
 
   char *server_identity_to_store = malloc(sizeof(char) * INET_ADDRSTRLEN);
   if(server_identity_to_store == NULL){
