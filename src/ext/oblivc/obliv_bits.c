@@ -710,6 +710,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   //const int one = 1;
   //setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
+  int fl;
   int winsize = 32 * 1024 * 1024;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
@@ -755,7 +756,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  SSL_set_bio(rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
 
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
