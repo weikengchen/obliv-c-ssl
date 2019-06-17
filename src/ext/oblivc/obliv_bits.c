@@ -719,12 +719,16 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  char other_identity[30];
-  sprintf(other_identity, "%s:%d", sa_info, sa.sin_port);
-  printf("Server's identity: %s\n", other_identity);
+  printf("Server's identity: %s\n", sa_info);
+  send(sock, sa_info, INET_ADDRSTRLEN);
+  char my_sa_info[INET_ADDRSTRLEN];
+  recv(sock, my_sa_info, INET_ADDRSTRLEN);
+  printf("My identity: %s\n", my_sa_info);
+
+  strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, other_identity, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
@@ -774,12 +778,16 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  char other_identity[30];
-  sprintf(other_identity, "%s:%d", sa_info, client_sa.sin_port);
-  printf("Client's identity: %s\n", other_identity);
+  printf("Client's identity: %s\n", sa_info);
+  send(sock, sa_info, INET_ADDRSTRLEN);
+  char my_sa_info[INET_ADDRSTRLEN];
+  recv(sock, my_sa_info, INET_ADDRSTRLEN);
+  printf("My identity: %s\n", my_sa_info);
+
+  strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, other_identity, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
