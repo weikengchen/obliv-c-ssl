@@ -403,13 +403,13 @@ static int tls2PSend(ProtocolTransport* pt, int dest, const void* s, size_t n){
 
 static int tls2PSendProfiled(ProtocolTransport* pt, int dest, const void* s, size_t n){
   struct tls2PTransport* tlst = CAST(pt);
-  size_t res = ssl2PSend(pt, dest, s, n);
+  size_t res = tls2PSend(pt, dest, s, n);
   if (res >= 0) tlst->bytes += res;
   return res;
 }
 
 static int tls2PRecv(ProtocolTransport* pt, int src, void* s, size_t n){
-  struct ssl2PTransport* tlst = CAST(pt);
+  struct tls2PTransport* tlst = CAST(pt);
   int res = 0, n2 = 0;
   if(tlst->needFlush) {
     transFlush(pt);
@@ -515,7 +515,7 @@ unsigned char* tls_key_dictionary_search(tls_key_dictionary *head, const char *t
 }
 
 tls_key_dictionary* tls_key_dictionary_insert(tls_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
-	if(ssl_key_dictionary_search(head, new_identity) != NULL){
+	if(tls_key_dictionary_search(head, new_identity) != NULL){
     return head;
   }else{
 		tls_key_dictionary *new_head = (tls_key_dictionary*) malloc(sizeof(tls_key_dictionary));
@@ -546,14 +546,14 @@ int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t iden
     return 0;
   }
 
-	SSL_SESSION *newswss = SSL_SESSION_new();
-	cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
+	SSL_SESSION *newsess = SSL_SESSION_new();
+	SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
 
 	if(newsess == NULL
 		|| cipher == NULL
-		|| !SSL_SESSION_set1_master_key(sess, found_key, 16)
-		|| !SSL_SESSION_set_cipher(sess, cipher)
-		|| !SSL_SESSION_set_protocol_version(sess, TLS1_3_VERSION)){
+		|| !SSL_SESSION_set1_master_key(newsess, found_key, 16)
+		|| !SSL_SESSION_set_cipher(newsess, cipher)
+		|| !SSL_SESSION_set_protocol_version(newsess, TLS1_3_VERSION)){
 			TLS_LOG_ERROR("Failed to create the TLS session");
 			return 0;
 	}
@@ -564,12 +564,12 @@ int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t iden
 }
 
 unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
-  if(ssl_my_identity[0] == 0){
+  if(tls_my_identity[0] == 0){
     TLS_LOG_ERROR("The client's identity has not yet been initialized.\n");
     return 0;
   }
 
-  const char *server_identity = ssl_get_ex_data(ssl, SSL_EX_DATA_INDEX_OTHER_PARTY_IP);
+  const char *server_identity = SSL_get_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP);
 
   if(server_identity == NULL){
     TLS_LOG_ERROR("The server's identity has not been set, and thus cannot find the key.\n");
@@ -579,7 +579,7 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   printf("I found the server's identity: %s\n", server_identity);
 
   const unsigned char *found_key;
-  ssl_key_dictionary_search(ssl_key_dictionary_head, server_identity, &found_key);
+  ssl_key_dictionary_search(tls_key_dictionary_head, server_identity, &found_key);
 
   if(found_key == NULL) {
     TLS_LOG_ERROR("Failed to find the key for this server (based on IP address)");
@@ -590,13 +590,13 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   *idlen = strlen(server_identity);
 
   SSL_SESSION *newsess = SSL_SESSION_new();
-	cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
+	SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
 
 	if(newsess == NULL
 		|| cipher == NULL
-		|| !SSL_SESSION_set1_master_key(sess, found_key, 16)
-		|| !SSL_SESSION_set_cipher(sess, cipher)
-		|| !SSL_SESSION_set_protocol_version(sess, TLS1_3_VERSION)){
+		|| !SSL_SESSION_set1_master_key(newsess, found_key, 16)
+		|| !SSL_SESSION_set_cipher(newsess, cipher)
+		|| !SSL_SESSION_set_protocol_version(newsess, TLS1_3_VERSION)){
 			TLS_LOG_ERROR("Failed to create the TLS session");
 			return 0;
 	}
@@ -638,7 +638,7 @@ SSL_CTX* tls_server_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    SSL_CTX_set_psk_find_session_callback(ctx, ssl_psk_server_callback);
+    SSL_CTX_set_psk_find_session_callback(ctx, tls_psk_server_callback);
   }
 
   return ctx;
@@ -655,17 +655,17 @@ SSL_CTX* tls_client_get_ctx(){
     }
 
     ctx = SSL_CTX_new(method);
-    if(!saved_ctx) {
+    if(!ctx) {
       TLS_LOG_ERROR("Failed to create context");
       exit(EXIT_FAILURE);
     }
 
     if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
-      LOG_ERROR("Failed to set cipher suite for TLS");
+      TLS_LOG_ERROR("Failed to set cipher suite for TLS");
       exit(EXIT_FAILURE);
     }
 
-    SSL_CTX_set_psk_use_session_callback(ctx, ssl_psk_client_callback);
+    SSL_CTX_set_psk_use_session_callback(ctx, tls_psk_client_callback);
   }
 
   return ctx;
@@ -701,7 +701,7 @@ void protocolUseTLS2P(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *
 }
 
 void protocolUseTLS2PKeepAlive(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
-  pd->trans = &ssl2PNew(sock, shared_ssl_ctx, ssl_socket, isClient, isProfiled)->cb;
+  pd->trans = &tls2PNew(sock, shared_ssl_ctx, ssl_socket, isClient, isProfiled)->cb;
   tls2PTransport* tlst = CAST(pd->trans);
   tlst->keepAlive = true;
 }
@@ -773,7 +773,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   getpeername(sock, (struct sockaddr *)&client_sa, &size_sa);
 
   if(inet_ntop(AF_INET, &(client_sa.sin_addr), sa_info, INET_ADDRSTRLEN) == NULL){
-    LOG_ERROR("Failed to extract the client's IP address");
+    TLS_LOG_ERROR("Failed to extract the client's IP address");
     return -1;
   }
 
@@ -782,7 +782,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   printf("Client's identity: %s\n", other_identity);
 
   // add the key into the directory
-  ssl_key_dictionary_head = ssl_key_dictionary_insert(ssl_key_dictionary_head, other_identity, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, other_identity, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
@@ -796,7 +796,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
 
   int error = SSL_do_handshake(ssl);
   if(error != 1){
-    LOG_ERROR("Handshake failed");
+    TLS_LOG_ERROR("Handshake failed");
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
 
@@ -839,7 +839,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
   }
 
   if(SSL_do_handshake(ssl) != 1){
-    LOG_ERROR("Handshake failed");
+    TLS_LOG_ERROR("Handshake failed");
     return NULL;
   }
 
