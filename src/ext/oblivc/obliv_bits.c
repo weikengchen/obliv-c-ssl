@@ -749,8 +749,6 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
     TLS_LOG_ERROR("Failed to create the BIO");
 
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
-
     char error_string[256];
     int err_in_queue;
     while(err_in_queue = ERR_get_error()){
@@ -765,8 +763,6 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
     TLS_LOG_ERROR("Failed to create a proper BIO buffer");
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
 
     char error_string[256];
     int err_in_queue;
@@ -862,8 +858,6 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
     TLS_LOG_ERROR("Failed to create the BIO");
 
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
-
     char error_string[256];
     int err_in_queue;
     while(err_in_queue = ERR_get_error()){
@@ -878,8 +872,6 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
     TLS_LOG_ERROR("Failed to create a proper BIO buffer");
-
-    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
 
     char error_string[256];
     int err_in_queue;
