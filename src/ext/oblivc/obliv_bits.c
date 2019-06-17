@@ -710,13 +710,13 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   //const int one = 1;
   //setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
-  int fl;
+  /*int fl;
   int winsize = 32 * 1024 * 1024;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
-  if (fl<0) { printf("set_up_socket:setsockopt");  }
+  if (fl<0) { printf("set_up_socket:setsockopt");  }*/
 
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -743,7 +743,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL_CTX * ctx = tls_client_get_ctx();
   SSL *ssl = SSL_new(ctx);
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  /*BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
@@ -773,7 +773,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);*/
 
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
@@ -814,13 +814,13 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
 //  const int one = 1;
 //  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
-  int fl;
+  /*int fl;
   int winsize = 32 * 1024 * 1024;
   fl = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, (char*)&winsize, sizeof(int));
   if (fl<0) { printf("set_up_socket:setsockopt");  }
 
   fl = setsockopt(sock, SOL_SOCKET, SO_SNDBUF, (char*)&winsize, sizeof(int));
-  if (fl<0) { printf("set_up_socket:setsockopt");  }
+  if (fl<0) { printf("set_up_socket:setsockopt");  }*/
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -852,7 +852,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   SSL_CTX * ctx = tls_server_get_ctx();
   SSL *ssl = SSL_new(ctx);
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  /*BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
@@ -882,7 +882,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);*/
 
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
