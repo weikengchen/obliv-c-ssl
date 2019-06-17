@@ -563,7 +563,7 @@ int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t iden
   return 1;
 }
 
-unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
+int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
   if(tls_my_identity[0] == 0){
     TLS_LOG_ERROR("The client's identity has not yet been initialized.\n");
     return 0;
@@ -579,7 +579,7 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   printf("I found the server's identity: %s\n", server_identity);
 
   const unsigned char *found_key;
-  ssl_key_dictionary_search(tls_key_dictionary_head, server_identity, &found_key);
+  tls_key_dictionary_search(tls_key_dictionary_head, server_identity, &found_key);
 
   if(found_key == NULL) {
     TLS_LOG_ERROR("Failed to find the key for this server (based on IP address)");
@@ -590,7 +590,7 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   *idlen = strlen(server_identity);
 
   SSL_SESSION *newsess = SSL_SESSION_new();
-	SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
+	const SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
 
 	if(newsess == NULL
 		|| cipher == NULL
@@ -718,7 +718,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   char sa_info[INET_ADDRSTRLEN];
   memset(sa_info, 0, INET_ADDRSTRLEN);
   if(inet_ntop(AF_INET, &(sa.sin_addr), sa_info, INET_ADDRSTRLEN) == NULL){
-    LOG_ERROR("Failed to extract the server's IP address");
+    TLS_LOG_ERROR("Failed to extract the server's IP address");
     return -1;
   }
 
