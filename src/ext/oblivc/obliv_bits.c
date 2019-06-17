@@ -720,9 +720,9 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   }
 
   printf("Server's identity: %s\n", sa_info);
-  send(sock, sa_info, INET_ADDRSTRLEN);
+  send(sock, sa_info, INET_ADDRSTRLEN, 0);
   char my_sa_info[INET_ADDRSTRLEN];
-  recv(sock, my_sa_info, INET_ADDRSTRLEN);
+  recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
   printf("My identity: %s\n", my_sa_info);
 
   strcpy(tls_my_identity, my_sa_info);
@@ -779,9 +779,9 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   }
 
   printf("Client's identity: %s\n", sa_info);
-  send(sock, sa_info, INET_ADDRSTRLEN);
+  send(sock, sa_info, INET_ADDRSTRLEN, 0);
   char my_sa_info[INET_ADDRSTRLEN];
-  recv(sock, my_sa_info, INET_ADDRSTRLEN);
+  recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
   printf("My identity: %s\n", my_sa_info);
 
   strcpy(tls_my_identity, my_sa_info);
