@@ -383,7 +383,7 @@ typedef struct tls2PTransport
 
   SSL_CTX *ssl_ctx;
   SSL *ssl_socket;
-} ssl2PTransport;
+} tls2PTransport;
 
 // Profiling output
 size_t tls2PBytesSent(ProtocolDesc* pd) { return ((tls2PTransport*)(pd->trans))->bytes; }

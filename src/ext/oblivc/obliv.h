@@ -20,8 +20,8 @@ int protocolConnectTcp2P(ProtocolDesc* pd,const char* server,const char* port);
 int protocolAcceptTcp2P(ProtocolDesc* pd,const char* port);
 int protocolConnectTcp2PProfiled(ProtocolDesc* pd,const char* server,const char* port);
 int protocolAcceptTcp2PProfiled(ProtocolDesc* pd,const char* port);
-int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port, const unsigned char *key, bool isProfiled);
-int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char *key, bool isProfiled);
+int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port, const unsigned char *key, bool isProfiled);
+int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char *key, bool isProfiled);
 void cleanupProtocol(ProtocolDesc*);
 
 void setCurrentParty(ProtocolDesc* pd, int party);
