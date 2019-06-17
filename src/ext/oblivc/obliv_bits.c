@@ -707,8 +707,8 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   if(getsockaddr(server, port, (struct sockaddr*)&sa) < 0) return -1; // dns error
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
-  //const int one = 1;
-  //setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+  const int one = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
   /*int fl;
   int winsize = 32 * 1024 * 1024;
@@ -811,8 +811,8 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   listenSock = tcpListenAny(port);
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
 
-//  const int one = 1;
-//  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+  const int one = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
   /*int fl;
   int winsize = 32 * 1024 * 1024;
