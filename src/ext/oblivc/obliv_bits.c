@@ -728,7 +728,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, my_sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
@@ -787,7 +787,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, my_sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
