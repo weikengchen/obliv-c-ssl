@@ -379,7 +379,7 @@ typedef struct tls2PTransport
   int sinceFlush;
   size_t bytes;
   size_t flushCount;
-  struct ssl2PTransport* parent;
+  struct tls2PTransport* parent;
 
   SSL_CTX *ssl_ctx;
   SSL *ssl_socket;
@@ -531,15 +531,13 @@ tls_key_dictionary* tls_key_dictionary_insert(tls_key_dictionary *head, const ch
 }
 
 int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t identity_len, SSL_SESSION **sess){
-	unsigned char *found_key;
-
 	char identity_end_with_zero[identity_len + 1];
 	memset(identity_end_with_zero, 0, identity_len);
 	memcpy(identity_end_with_zero, identity, identity_len);
 
   printf("Someone asks me for a key for the identity %s\n", identity_end_with_zero);
 
-	tls_key_dictionary_search(tls_key_dictionary_head, identity, &found_key);
+	const unsigned char *found_key = tls_key_dictionary_search(tls_key_dictionary_head, identity);
 
   if(found_key == NULL) {
     TLS_LOG_ERROR("Failed to find the key for this client (IP address)");
@@ -578,8 +576,7 @@ int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id
 
   printf("I found the server's identity: %s\n", server_identity);
 
-  const unsigned char *found_key;
-  tls_key_dictionary_search(tls_key_dictionary_head, server_identity, &found_key);
+  const unsigned char *found_key = tls_key_dictionary_search(tls_key_dictionary_head, server_identity);
 
   if(found_key == NULL) {
     TLS_LOG_ERROR("Failed to find the key for this server (based on IP address)");
