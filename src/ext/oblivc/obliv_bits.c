@@ -369,6 +369,8 @@ static ProtocolTransport* tcp2PSplit(ProtocolTransport* tsrc)
 // For two-party computation with semi-honest security, we only ensure
 //   authenticity, but no confidentiality of the two parties' transcript.
 
+#define TLS13_AES_128_GCM_SHA256_BYTES  ((const unsigned char *)"\x13\x01")
+
 typedef struct ssl2PTransport
 { ProtocolTransport cb;
   int sock;
@@ -487,6 +489,8 @@ static const ssl2PTransport ssl2PProfiledTransportTemplate
 #define LOG_ERROR(msg) printf("[ERROR] : %s\n", msg)
 #define LOG_INFO(msg) printf("[INFO] : %s\n", msg)
 
+#define SSL_EX_DATA_INDEX_OTHER_PARTY_IP 1
+
 /*
 * For every initialization of protocol using protocolConnectSSL2P or protocolConnectSSL2P,
 * the program takes the IP address of the other party as the identity.
@@ -495,30 +499,27 @@ static const ssl2PTransport ssl2PProfiledTransportTemplate
 */
 typedef struct _ssl_key_dictionary {
   struct _ssl_key_dictionary *next;
-  char other_identity[40];
-  char my_identity[40];
+  char identity[40];
   unsigned char key[16];
 } ssl_key_dictionary;
 
 ssl_key_dictionary *ssl_key_dictionary_head = NULL;
+char ssl_my_identity[40];
 
-void ssl_key_dictionary_search(ssl_key_dictionary *head, const char *target_other_identity, char **found_my_identity, unsigned char **found_key){
+(unsigned char*) ssl_key_dictionary_search(ssl_key_dictionary *head, const char *target_identity){
   ssl_key_dictionary *cur = head;
 
   while(cur != NULL) {
-    if(strcmp(cur->other_identity, target_other_identity) == 0){
-      *found_my_identity = cur->my_identity;
-      *found_key = cur->key;
-      return;
+    if(strcmp(cur->identity, target_identity) == 0){
+      return cur->key;
     }
     cur = cur->next;
   }
 
-  *found_my_identity = NULL;
-  *found_key = NULL;
+  return NULL;
 }
 
-ssl_key_dictionary* ssl_key_dictionary_insert(ssl_key_dictionary *head, char *new_other_identity, char *new_my_identity, const unsigned char *new_key){
+ssl_key_dictionary* ssl_key_dictionary_insert(ssl_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
   ssl_key_dictionary *new_head = (ssl_key_dictionary*) malloc(sizeof(ssl_key_dictionary));
 
   if(new_head == NULL) {
@@ -527,23 +528,17 @@ ssl_key_dictionary* ssl_key_dictionary_insert(ssl_key_dictionary *head, char *ne
   }
 
   new_head->next = head;
-  strcpy(new_head->other_identity, new_other_identity);
-  strcpy(new_head->my_identity, new_my_identity);
+  strcpy(new_head->identity, new_identity);
   memcpy(new_head->key, new_key, 16);
 
   return new_head;
 }
 
-ssl_key_dictionary* ssl_key_dictionary_suggest(ssl_key_dictionary *head, char *new_other_identity, char *new_my_identity, const unsigned char *new_key){
-  char *found_my_identity;
-  unsigned char *found_key;
-
-  ssl_key_dictionary_search(head, new_other_identity, &found_my_identity, &found_key);
-
-  if(found_my_identity != NULL){
+ssl_key_dictionary* ssl_key_dictionary_suggest(ssl_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
+  if(ssl_key_dictionary_search(head, new_identity) != NULL){
     return head;
   }else{
-    return ssl_key_dictionary_insert(head, new_other_identity, new_my_identity, new_key);
+    return ssl_key_dictionary_insert(head, new_identity, new_key);
   }
 }
 
@@ -567,26 +562,36 @@ unsigned int ssl_psk_server_callback(SSL *ssl, const char *identity, unsigned ch
   return psk_len_copy;
 }
 
-unsigned int ssl_psk_client_callback(SSL *ssl, const char *hint, char *identity, unsigned int max_identity_len, unsigned char *psk, unsigned int max_psk_len){
-  char *found_my_identity;
-  unsigned char *found_key;
-
-  printf("Someone gives me a hint %s\n", hint);
-
-  // hint is the server's address
-  ssl_key_dictionary_search(ssl_key_dictionary_head, hint, &found_my_identity, &found_key);
-
-  if(found_key == NULL) {
-    LOG_ERROR("Failed to find the key for this server (IP address)");
+unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
+  if(ssl_my_identity[0] == 0){
+    LOG_ERROR("The client's identity has not yet been initialized.\n");
     return 0;
   }
 
-  memset(identity, 0, max_identity_len);
-  strcpy(identity, found_my_identity);
+  const char *server_identity = ssl_get_ex_data(ssl, SSL_EX_DATA_INDEX_OTHER_PARTY_IP);
 
-  memset(psk, 0, max_psk_len);
-  int psk_len_copy = max_psk_len >= 16 ? 16 : max_psk_len;
-  memcpy(psk, found_key, psk_len_copy);
+  if(server_identity == NULL){
+    LOG_ERROR("The server's identity has not been set, and thus cannot find the key.\n");
+    return 0;
+  }
+
+  printf("I found the server's identity: %s\n", server_identity);
+
+  const unsigned char *found_key;
+  ssl_key_dictionary_search(ssl_key_dictionary_head, server_identity, &found_key);
+
+  if(found_key == NULL) {
+    LOG_ERROR("Failed to find the key for this server (based on IP address)");
+    return 0;
+  }
+
+  *id = server_identity;
+  *idlen = strlen(server_identity);
+
+  SSL_SESSION *newsess = SSL_SESSION_new();
+  cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
+
+
 
   return psk_len_copy;
 }
@@ -617,17 +622,19 @@ SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
     exit(EXIT_FAILURE);
   }
 
-  if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
-    LOG_ERROR("Failed to set cipher suite for TLS");
-    exit(EXIT_FAILURE);
-  }
+  printf("hint is %s\n", my_ip_address);
 
   if(!SSL_CTX_use_psk_identity_hint(ctx, my_ip_address)) {
     LOG_ERROR("Failed to set the SSL hint to be this party's IP address");
     exit(EXIT_FAILURE);
   }
 
-  SSL_CTX_set_psk_server_callback(ctx, ssl_psk_server_callback);
+  if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
+    LOG_ERROR("Failed to set cipher suite for TLS");
+    exit(EXIT_FAILURE);
+  }
+
+  SSL_CTX_set_psk_find_session_callback(saved_ctx, ssl_psk_server_callback);
 
   return ctx;
 }
@@ -653,7 +660,7 @@ SSL_CTX* ssl_client_get_ctx(){
       exit(EXIT_FAILURE);
     }
 
-    SSL_CTX_set_psk_client_callback(saved_ctx, ssl_psk_client_callback);
+    SSL_CTX_set_psk_use_session_callback(saved_ctx, ssl_psk_client_callback);
   }
 
   return saved_ctx;
