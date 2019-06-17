@@ -369,9 +369,7 @@ static ProtocolTransport* tcp2PSplit(ProtocolTransport* tsrc)
 // For two-party computation with semi-honest security, we only ensure
 //   authenticity, but no confidentiality of the two parties' transcript.
 
-#define TLS13_AES_128_GCM_SHA256_BYTES  ((const unsigned char *)"\x13\x01")
-
-typedef struct ssl2PTransport
+typedef struct tls2PTransport
 { ProtocolTransport cb;
   int sock;
   bool isClient;
@@ -388,43 +386,40 @@ typedef struct ssl2PTransport
 } ssl2PTransport;
 
 // Profiling output
-size_t ssl2PBytesSent(ProtocolDesc* pd) { return ((ssl2PTransport*)(pd->trans))->bytes; }
-size_t ssl2PFlushCount(ProtocolDesc* pd) { return ((ssl2PTransport*)(pd->trans))->flushCount; }
+size_t tls2PBytesSent(ProtocolDesc* pd) { return ((tls2PTransport*)(pd->trans))->bytes; }
+size_t tls2PFlushCount(ProtocolDesc* pd) { return ((tls2PTransport*)(pd->trans))->flushCount; }
 
-static int ssl2PSend(ProtocolTransport* pt, int dest, const void* s, size_t n)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
+static int tls2PSend(ProtocolTransport* pt, int dest, const void* s, size_t n){
+  struct tls2PTransport* tlst = CAST(pt);
   size_t n2 = 0;
-  sslt->needFlush = true;
+  tlst->needFlush = true;
   while(n > n2) {
-    int res = SSL_write(sslt->ssl_socket, ((char*)s) + n2, n - n2);
-    if(res < 0) { perror("SSL write error: "); return res; }
+    int res = SSL_write(tlst->ssl_socket, ((char*)s) + n2, n - n2);
+    if(res < 0) { perror("TLS write error: "); return res; }
     n2 += res;
   }
   return n2;
 }
 
-static int ssl2PSendProfiled(ProtocolTransport* pt, int dest, const void* s, size_t n)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
+static int tls2PSendProfiled(ProtocolTransport* pt, int dest, const void* s, size_t n){
+  struct tls2PTransport* tlst = CAST(pt);
   size_t res = ssl2PSend(pt, dest, s, n);
-  if (res >= 0) sslt->bytes += res;
+  if (res >= 0) tlst->bytes += res;
   return res;
 }
 
-static int ssl2PRecv(ProtocolTransport* pt, int src, void* s, size_t n)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
+static int tls2PRecv(ProtocolTransport* pt, int src, void* s, size_t n){
+  struct ssl2PTransport* tlst = CAST(pt);
   int res = 0, n2 = 0;
-  if(sslt->needFlush) {
+  if(tlst->needFlush) {
     transFlush(pt);
-    sslt->needFlush = false;
+    tlst->needFlush = false;
   }
 
   while(n > n2) {
-    res = SSL_read(sslt->ssl_socket, ((char*)s) + n2, n - n2);
-    if(res < 0 || BIO_eof(SSL_get_rbio(sslt->ssl_socket))) {
-      perror("SSL read error: ");
+    res = SSL_read(tlst->ssl_socket, ((char*)s) + n2, n - n2);
+    if(res < 0 || BIO_eof(SSL_get_rbio(tlst->ssl_socket))) {
+      perror("TLS read error: ");
       return res;
     }
     n2 += res;
@@ -432,53 +427,49 @@ static int ssl2PRecv(ProtocolTransport* pt, int src, void* s, size_t n)
   return res;
 }
 
-static int ssl2PFlush(ProtocolTransport* pt)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
-  return BIO_flush(SSL_get_wbio(sslt->ssl_socket));
+static int tls2PFlush(ProtocolTransport* pt){
+  struct tls2PTransport* tlst = CAST(pt);
+  return BIO_flush(SSL_get_wbio(tlst->ssl_socket));
 }
 
-static int ssl2PFlushProfiled(ProtocolTransport* pt)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
-  if(sslt->needFlush) sslt->flushCount++;
-  return ssl2PFlush(pt);
+static int tls2PFlushProfiled(ProtocolTransport* pt){
+  struct tls2PTransport* tlst = CAST(pt);
+  if(tlst->needFlush) tlst->flushCount++;
+  return tls2PFlush(pt);
 }
 
-static void ssl2PCleanup(ProtocolTransport* pt)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
-  BIO_flush(SSL_get_wbio(sslt->ssl_socket));
-  if(!sslt->keepAlive){
-    SSL_shutdown(sslt->ssl_socket);
-    close(sslt->sock);
+static void tls2PCleanup(ProtocolTransport* pt){
+  struct tls2PTransport* tlst = CAST(pt);
+  BIO_flush(SSL_get_wbio(tlst->ssl_socket));
+  if(!tlst->keepAlive){
+    SSL_shutdown(tlst->ssl_socket);
+    close(tlst->sock);
   }
-  SSL_free(sslt->ssl_socket);
+  SSL_free(tlst->ssl_socket);
   free(pt);
 }
 
-static void ssl2PCleanupProfiled(ProtocolTransport* pt)
-{
-  struct ssl2PTransport* sslt = CAST(pt);
-  sslt->flushCount++;
-  if(sslt->parent != NULL) {
-    sslt->parent->bytes += sslt->bytes;
-    sslt->parent->flushCount += sslt->flushCount;
+static void tls2PCleanupProfiled(ProtocolTransport* pt){
+  struct tls2PTransport* tlst = CAST(pt);
+  tlst->flushCount++;
+  if(tlst->parent != NULL) {
+    tlst->parent->bytes += tlst->bytes;
+    tlst->parent->flushCount += tlst->flushCount;
   }
-  ssl2PCleanup(pt);
+  tls2PCleanup(pt);
 }
 
-static ProtocolTransport* ssl2PSplit(ProtocolTransport* tsrc);
+static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc);
 
-static const ssl2PTransport ssl2PTransportTemplate
-  = {{.maxParties = 2, .split = ssl2PSplit, .send = ssl2PSend, .recv = ssl2PRecv, .flush = ssl2PFlush,
-      .cleanup = ssl2PCleanup},
+static const tls2PTransport tls2PTransportTemplate
+  = {{.maxParties = 2, .split = tls2PSplit, .send = tls2PSend, .recv = tls2PRecv, .flush = tls2PFlush,
+      .cleanup = tls2PCleanup},
      .sock = 0, .isClient = 0, .needFlush = false, .bytes = 0, .flushCount = 0,
      .parent = NULL, .ssl_ctx = NULL, .ssl_socket = NULL};
 
-static const ssl2PTransport ssl2PProfiledTransportTemplate
-  = {{.maxParties = 2, .split = ssl2PSplit, .send = ssl2PSendProfiled, .recv = ssl2PRecv,
-     .flush=ssl2PFlushProfiled, .cleanup = ssl2PCleanupProfiled},
+static const tls2PTransport tls2PProfiledTransportTemplate
+  = {{.maxParties = 2, .split = tls2PSplit, .send = tls2PSendProfiled, .recv = tls2PRecv,
+     .flush = tls2PFlushProfiled, .cleanup = tls2PCleanupProfiled},
      .sock = 0, .isClient = 0, .needFlush = false, .bytes = 0, .flushCount = 0,
      .parent = NULL, .ssl_ctx = NULL, .ssl_socket = NULL};
 
@@ -486,10 +477,11 @@ static const ssl2PTransport ssl2PProfiledTransportTemplate
 * Using the code from https://github.com/okba-zoueghi/tls_examples
 * for the context creation and auxiliary functions
 */
-#define LOG_ERROR(msg) printf("[ERROR] : %s\n", msg)
-#define LOG_INFO(msg) printf("[INFO] : %s\n", msg)
+#define TLS_LOG_ERROR(msg) printf("[TLS ERROR] : %s\n", msg)
+#define TLS_LOG_INFO(msg) printf("[TLS INFO] : %s\n", msg)
 
-#define SSL_EX_DATA_INDEX_OTHER_PARTY_IP 1
+#define TLS_AES_128_GCM_SHA256_BYTES  ((const unsigned char *)"\x13\x01")
+#define TLS_EX_DATA_INDEX_OTHER_PARTY_IP 1
 
 /*
 * For every initialization of protocol using protocolConnectSSL2P or protocolConnectSSL2P,
@@ -497,81 +489,90 @@ static const ssl2PTransport ssl2PProfiledTransportTemplate
 *
 * This is to allow in one program multiple instances of Obliv-C can be invoked with different parties in different PSK.
 */
-typedef struct _ssl_key_dictionary {
-  struct _ssl_key_dictionary *next;
+
+typedef struct _tls_key_dictionary {
+  struct _tls_key_dictionary *next;
   char identity[40];
   unsigned char key[16];
-} ssl_key_dictionary;
+} tls_key_dictionary;
 
-ssl_key_dictionary *ssl_key_dictionary_head = NULL;
-char ssl_my_identity[40];
+tls_key_dictionary *tls_key_dictionary_head = NULL;
+char tls_my_identity[40];
 
-(unsigned char*) ssl_key_dictionary_search(ssl_key_dictionary *head, const char *target_identity){
-  ssl_key_dictionary *cur = head;
+void tls_set_my_identity(const char* my_identity){
+	strcpy(tls_my_identity, my_identity);
+}
 
+unsigned char* tls_key_dictionary_search(tls_key_dictionary *head, const char *target_identity){
+  tls_key_dictionary *cur = head;
   while(cur != NULL) {
     if(strcmp(cur->identity, target_identity) == 0){
       return cur->key;
     }
     cur = cur->next;
   }
-
   return NULL;
 }
 
-ssl_key_dictionary* ssl_key_dictionary_insert(ssl_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
-  ssl_key_dictionary *new_head = (ssl_key_dictionary*) malloc(sizeof(ssl_key_dictionary));
-
-  if(new_head == NULL) {
-    LOG_ERROR("Failed to allocate space for the linked list");
-    exit(EXIT_FAILURE);
-  }
-
-  new_head->next = head;
-  strcpy(new_head->identity, new_identity);
-  memcpy(new_head->key, new_key, 16);
-
-  return new_head;
-}
-
-ssl_key_dictionary* ssl_key_dictionary_suggest(ssl_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
-  if(ssl_key_dictionary_search(head, new_identity) != NULL){
+tls_key_dictionary* tls_key_dictionary_insert(tls_key_dictionary *head, const char *new_identity, const unsigned char *new_key){
+	if(ssl_key_dictionary_search(head, new_identity) != NULL){
     return head;
   }else{
-    return ssl_key_dictionary_insert(head, new_identity, new_key);
-  }
+		tls_key_dictionary *new_head = (tls_key_dictionary*) malloc(sizeof(tls_key_dictionary));
+	  if(new_head == NULL) {
+	    TLS_LOG_ERROR("Failed to allocate space for the linked list");
+	    exit(EXIT_FAILURE);
+	  }
+	  new_head->next = head;
+	  strcpy(new_head->identity, new_identity);
+	  memcpy(new_head->key, new_key, 16);
+	  return new_head;
+	}
 }
 
-unsigned int ssl_psk_server_callback(SSL *ssl, const char *identity, unsigned char *psk, unsigned int max_psk_len){
-  char *found_my_identity;
-  unsigned char *found_key;
+int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t identity_len, SSL_SESSION **sess){
+	unsigned char *found_key;
 
-  printf("Someone asks me for a key for the identity %s\n", identity);
+	char identity_end_with_zero[identity_len + 1];
+	memset(identity_end_with_zero, 0, identity_len);
+	memcpy(identity_end_with_zero, identity, identity_len);
 
-  ssl_key_dictionary_search(ssl_key_dictionary_head, identity, &found_my_identity, &found_key);
+  printf("Someone asks me for a key for the identity %s\n", identity_end_with_zero);
+
+	tls_key_dictionary_search(tls_key_dictionary_head, identity, &found_key);
 
   if(found_key == NULL) {
-    LOG_ERROR("Failed to find the key for this client (IP address)");
+    TLS_LOG_ERROR("Failed to find the key for this client (IP address)");
     return 0;
   }
 
-  memset(psk, 0, max_psk_len);
-  int psk_len_copy = max_psk_len >= 16 ? 16 : max_psk_len;
-  memcpy(psk, found_key, psk_len_copy);
+	SSL_SESSION *newswss = SSL_SESSION_new();
+	cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
 
-  return psk_len_copy;
+	if(newsess == NULL
+		|| cipher == NULL
+		|| !SSL_SESSION_set1_master_key(sess, found_key, 16)
+		|| !SSL_SESSION_set_cipher(sess, cipher)
+		|| !SSL_SESSION_set_protocol_version(sess, TLS1_3_VERSION)){
+			TLS_LOG_ERROR("Failed to create the TLS session");
+			return 0;
+	}
+
+	*sess = newsess;
+
+  return 1;
 }
 
 unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
   if(ssl_my_identity[0] == 0){
-    LOG_ERROR("The client's identity has not yet been initialized.\n");
+    TLS_LOG_ERROR("The client's identity has not yet been initialized.\n");
     return 0;
   }
 
   const char *server_identity = ssl_get_ex_data(ssl, SSL_EX_DATA_INDEX_OTHER_PARTY_IP);
 
   if(server_identity == NULL){
-    LOG_ERROR("The server's identity has not been set, and thus cannot find the key.\n");
+    TLS_LOG_ERROR("The server's identity has not been set, and thus cannot find the key.\n");
     return 0;
   }
 
@@ -581,7 +582,7 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   ssl_key_dictionary_search(ssl_key_dictionary_head, server_identity, &found_key);
 
   if(found_key == NULL) {
-    LOG_ERROR("Failed to find the key for this server (based on IP address)");
+    TLS_LOG_ERROR("Failed to find the key for this server (based on IP address)");
     return 0;
   }
 
@@ -589,14 +590,23 @@ unsigned int ssl_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned 
   *idlen = strlen(server_identity);
 
   SSL_SESSION *newsess = SSL_SESSION_new();
-  cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
+	cipher = SSL_CIPHER_find(ssl, TLS13_AES_128_GCM_SHA256_BYTES);
 
+	if(newsess == NULL
+		|| cipher == NULL
+		|| !SSL_SESSION_set1_master_key(sess, found_key, 16)
+		|| !SSL_SESSION_set_cipher(sess, cipher)
+		|| !SSL_SESSION_set_protocol_version(sess, TLS1_3_VERSION)){
+			TLS_LOG_ERROR("Failed to create the TLS session");
+			return 0;
+	}
 
+	*sess = newsess;
 
-  return psk_len_copy;
+  return 1;
 }
 
-void ssl_library_init(){
+void tls_library_init(){
   static int init_done = 0;
 
   if(init_done == 0){
@@ -607,75 +617,70 @@ void ssl_library_init(){
   }
 }
 
-SSL_CTX* ssl_server_get_ctx(const char *my_ip_address){
-  SSL_CTX *ctx;
+SSL_CTX* tls_server_get_ctx(){
+  static SSL_CTX *ctx = NULL;
 
-  const SSL_METHOD * method = TLS_method();
-  if(!method) {
-    LOG_ERROR("Failed to create method");
-    exit(EXIT_FAILURE);
+  if(ctx == NULL){
+    const SSL_METHOD * method = TLS_method();
+    if(!method) {
+      TLS_LOG_ERROR("Failed to create method");
+      exit(EXIT_FAILURE);
+    }
+
+    ctx = SSL_CTX_new(method);
+    if(!ctx) {
+      TLS_LOG_ERROR("Failed to create context");
+      exit(EXIT_FAILURE);
+    }
+
+    if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
+      TLS_LOG_ERROR("Failed to set cipher suite for TLS");
+      exit(EXIT_FAILURE);
+    }
+
+    SSL_CTX_set_psk_find_session_callback(ctx, ssl_psk_server_callback);
   }
-
-  ctx = SSL_CTX_new(method);
-  if(!ctx) {
-    LOG_ERROR("Failed to create context");
-    exit(EXIT_FAILURE);
-  }
-
-  printf("hint is %s\n", my_ip_address);
-
-  if(!SSL_CTX_use_psk_identity_hint(ctx, my_ip_address)) {
-    LOG_ERROR("Failed to set the SSL hint to be this party's IP address");
-    exit(EXIT_FAILURE);
-  }
-
-  if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
-    LOG_ERROR("Failed to set cipher suite for TLS");
-    exit(EXIT_FAILURE);
-  }
-
-  SSL_CTX_set_psk_find_session_callback(saved_ctx, ssl_psk_server_callback);
 
   return ctx;
 }
 
-SSL_CTX* ssl_client_get_ctx(){
-  static SSL_CTX *saved_ctx = NULL;
+SSL_CTX* tls_client_get_ctx(){
+  static SSL_CTX *ctx = NULL;
 
-  if(saved_ctx == NULL){
+  if(ctx == NULL){
     const SSL_METHOD * method = TLS_method();
     if(!method) {
-      LOG_ERROR("Failed to create method");
+      TLS_LOG_ERROR("Failed to create method");
       exit(EXIT_FAILURE);
     }
 
-    saved_ctx = SSL_CTX_new(method);
+    ctx = SSL_CTX_new(method);
     if(!saved_ctx) {
-      LOG_ERROR("Failed to create context");
+      TLS_LOG_ERROR("Failed to create context");
       exit(EXIT_FAILURE);
     }
 
-    if(!SSL_CTX_set_ciphersuites(saved_ctx, "TLS_AES_128_GCM_SHA256")) {
+    if(!SSL_CTX_set_ciphersuites(ctx, "TLS_AES_128_GCM_SHA256")) {
       LOG_ERROR("Failed to set cipher suite for TLS");
       exit(EXIT_FAILURE);
     }
 
-    SSL_CTX_set_psk_use_session_callback(saved_ctx, ssl_psk_client_callback);
+    SSL_CTX_set_psk_use_session_callback(ctx, ssl_psk_client_callback);
   }
 
-  return saved_ctx;
+  return ctx;
 }
 
 // isClient value will only be used for the split() method, otherwise
 // its value doesn't matter. In that case, it indicates which party should be
 // the server vs. client for the new connections (which is usually the same as
 // the old roles).
-static ssl2PTransport* ssl2PNew(int sock, SSL_CTX *ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
-  ssl2PTransport* trans = malloc(sizeof(*trans));
+static tls2PTransport* tls2PNew(int sock, SSL_CTX *ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
+  tls2PTransport* trans = malloc(sizeof(*trans));
   if (isProfiled) {
-    *trans = ssl2PProfiledTransportTemplate;
+    *trans = tls2PProfiledTransportTemplate;
   } else {
-    *trans = ssl2PTransportTemplate;
+    *trans = tls2PTransportTemplate;
   }
   trans->sock = sock;
   trans->isProfiled = isProfiled;
@@ -689,27 +694,25 @@ static ssl2PTransport* ssl2PNew(int sock, SSL_CTX *ssl_ctx, SSL *ssl_socket, boo
   return trans;
 }
 
-void protocolUseSSL2P(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
-  pd->trans = &ssl2PNew(sock, shared_ssl_ctx, ssl_socket, isClient, isProfiled)->cb;
-  ssl2PTransport* sslt = CAST(pd->trans);
-  sslt->keepAlive = false;
+void protocolUseTLS2P(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
+  pd->trans = &tls2PNew(sock, shared_ssl_ctx, ssl_socket, isClient, isProfiled)->cb;
+  tls2PTransport* tlst = CAST(pd->trans);
+  tlst->keepAlive = false;
 }
 
-void protocolUseSSL2PKeepAlive(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
+void protocolUseTLS2PKeepAlive(ProtocolDesc* pd, int sock, SSL_CTX *shared_ssl_ctx, SSL *ssl_socket, bool isClient, bool isProfiled) {
   pd->trans = &ssl2PNew(sock, shared_ssl_ctx, ssl_socket, isClient, isProfiled)->cb;
-  ssl2PTransport* sslt = CAST(pd->trans);
-  sslt->keepAlive = true;
+  tls2PTransport* tlst = CAST(pd->trans);
+  tlst->keepAlive = true;
 }
 
-int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port, const unsigned char *key, bool isProfiled) {
+int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port, const unsigned char *key, bool isProfiled) {
   struct sockaddr_in sa;
   if(getsockaddr(server, port, (struct sockaddr*)&sa) < 0) return -1; // dns error
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
   const int one = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-  printf("Client is ready to send the IP information.\n");
 
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -719,44 +722,24 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  send(sock, sa_info, INET_ADDRSTRLEN, 0);
-  send(sock, &sa.sin_port, sizeof(unsigned short), 0);
-
-  printf("Server sends the IP information to the client.\n");
-
-  char my_sa_info[INET_ADDRSTRLEN];
-  unsigned short my_port;
-
-  // receive the sa information
-  recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
-  recv(sock, &my_port, sizeof(unsigned short), 0);
-
-  printf("Server receives the IP information from the client.\n");
-
   char other_identity[30];
-  char my_identity[30];
-
   sprintf(other_identity, "%s:%d", sa_info, sa.sin_port);
-  sprintf(my_identity, "%s:%d", my_sa_info, my_port);
-
-  printf("Client's identity: %s\n", other_identity);
-  printf("Server's identity: %s\n", my_identity);
+  printf("Server's identity: %s\n", other_identity);
 
   // add the key into the directory
-  ssl_key_dictionary_head = ssl_key_dictionary_suggest(ssl_key_dictionary_head, other_identity, my_identity, key);
-
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, other_identity, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
-  ssl_library_init();
-  SSL_CTX * ctx = ssl_client_get_ctx();
+  tls_library_init();
+  SSL_CTX * ctx = tls_client_get_ctx();
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
 
   int error = SSL_do_handshake(ssl);
   if(error != 1){
-    LOG_ERROR("Handshake failed");
+    TLS_LOG_ERROR("Handshake failed");
 
     printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
 
@@ -769,19 +752,17 @@ int protocolConnectSSL2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  protocolUseSSL2P(pd, sock, ctx, ssl, true, isProfiled);
+  protocolUseTLS2P(pd, sock, ctx, ssl, true, isProfiled);
   return 0;
 }
 
-int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char *key, bool isProfiled) {
+int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char *key, bool isProfiled) {
   int listenSock, sock;
   listenSock = tcpListenAny(port);
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
 
   const int one = 1;
   setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
-
-  printf("Server accepts a connection from the client, now sending the IP information.\n");
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
@@ -796,40 +777,17 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  send(sock, sa_info, INET_ADDRSTRLEN, 0);
-  send(sock, &client_sa.sin_port, sizeof(unsigned short), 0);
-
-  printf("Server sends the IP information to the client.\n");
-
-  char my_sa_info[INET_ADDRSTRLEN];
-  unsigned short my_port;
-
-  // receive the sa information
-  recv(sock, my_sa_info, INET_ADDRSTRLEN, 0);
-  recv(sock, &my_port, sizeof(unsigned short), 0);
-
-  printf("Server receives the IP information from the client.\n");
-
   char other_identity[30];
-  char my_identity[30];
-
   sprintf(other_identity, "%s:%d", sa_info, client_sa.sin_port);
-  sprintf(my_identity, "%s:%d", my_sa_info, my_port);
-
   printf("Client's identity: %s\n", other_identity);
-  printf("Server's identity: %s\n", my_identity);
 
   // add the key into the directory
-  ssl_key_dictionary_head = ssl_key_dictionary_suggest(ssl_key_dictionary_head, other_identity, my_identity, key);
-
+  ssl_key_dictionary_head = ssl_key_dictionary_insert(ssl_key_dictionary_head, other_identity, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
-  ssl_library_init();
-  SSL_CTX * ctx = ssl_server_get_ctx(my_identity);
-
-  printf("Created the SSL context.\n");
-
+  tls_library_init();
+  SSL_CTX * ctx = tls_server_get_ctx();
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
@@ -853,29 +811,29 @@ int protocolAcceptSSL2P(ProtocolDesc* pd, const char* port, const unsigned char 
 
   printf("Handshake done.\n");
 
-  protocolUseSSL2P(pd, sock, ctx, ssl, false, isProfiled);
+  protocolUseTLS2P(pd, sock, ctx, ssl, false, isProfiled);
   close(listenSock);
   return 0;
 }
 
-static ProtocolTransport* ssl2PSplit(ProtocolTransport* tsrc){
-  ssl2PTransport* sslt = CAST(tsrc);
+static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
+  tls2PTransport* tlst = CAST(tsrc);
   transFlush(tsrc);
 
   // duplicate the TCP socket, now need to establish the SSL connection over it.
-  int newsock = sockSplit(sslt->sock, tsrc, sslt->isClient);
+  int newsock = sockSplit(tlst->sock, tsrc, tlst->isClient);
   if(newsock < 0) {
     fprintf(stderr, "sockSplit() failed\n");
     return NULL;
   }
 
   SSL *ssl;
-  if(sslt->isClient){
-    ssl = SSL_new(sslt->ssl_ctx);
+  if(tlst->isClient){
+    ssl = SSL_new(tlst->ssl_ctx);
     SSL_set_fd(ssl, newsock);
     SSL_set_connect_state(ssl);
   }else{
-    ssl = SSL_new(sslt->ssl_ctx);
+    ssl = SSL_new(tlst->ssl_ctx);
     SSL_set_fd(ssl, newsock);
     SSL_set_accept_state(ssl);
   }
@@ -885,8 +843,8 @@ static ProtocolTransport* ssl2PSplit(ProtocolTransport* tsrc){
     return NULL;
   }
 
-  ssl2PTransport* tnew = ssl2PNew(newsock, sslt->ssl_ctx, ssl, sslt->isClient, sslt->isProfiled);
-  tnew->parent = sslt;
+  tls2PTransport* tnew = ssl2PNew(newsock, tlst->ssl_ctx, ssl, tlst->isClient, tlst->isProfiled);
+  tnew->parent = tlst;
   return CAST(tnew);
 }
 
