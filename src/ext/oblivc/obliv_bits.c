@@ -583,8 +583,8 @@ int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id
     return 0;
   }
 
-  *id = server_identity;
-  *idlen = strlen(server_identity);
+  *id = my_identity;
+  *idlen = strlen(my_identity);
 
   SSL_SESSION *newsess = SSL_SESSION_new();
 	const SSL_CIPHER *cipher = SSL_CIPHER_find(ssl, TLS_AES_128_GCM_SHA256_BYTES);
@@ -737,6 +737,16 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL *ssl = SSL_new(ctx);
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
+
+
+  char *server_identity_to_store = malloc(sizeof(char) * INET_ADDRSTRLEN);
+  if(server_identity_to_store == NULL){
+    TLS_LOG_ERROR("Failed to reserve space to store the counterpart's IP address");
+    return -1;
+  }
+
+  strcpy(server_identity_to_store, sa_info);
+  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
 
   int error = SSL_do_handshake(ssl);
   if(error != 1){
