@@ -746,13 +746,34 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   BIO* rbio_with_buf = BIO_new(BIO_s_mem());
   BIO* wbio_with_buf = BIO_new(BIO_s_mem());
 
-  if(rbio_with_buf == NULL
-    || wbio_with_buf == NULL
-    || BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
+  if(rbio_with_buf == NULL || wbio_with_buf == NULL){
+    TLS_LOG_ERROR("Failed to create the BIO");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
+    return -1;
+  }
+
+  if(BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
     || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
-    TLS_LOG_ERROR("Failed to bind a buffer to the SSL socket");
+    TLS_LOG_ERROR("Failed to create a proper BIO buffer");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
     return -1;
   }
 
@@ -838,13 +859,34 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   BIO* rbio_with_buf = BIO_new(BIO_s_mem());
   BIO* wbio_with_buf = BIO_new(BIO_s_mem());
 
-  if(rbio_with_buf == NULL
-    || wbio_with_buf == NULL
-    || BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
+  if(rbio_with_buf == NULL || wbio_with_buf == NULL){
+    TLS_LOG_ERROR("Failed to create the BIO");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
+    return -1;
+  }
+
+  if(BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
     || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
-    TLS_LOG_ERROR("Failed to bind a buffer to the SSL socket");
+    TLS_LOG_ERROR("Failed to create a proper BIO buffer");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
     return -1;
   }
 
