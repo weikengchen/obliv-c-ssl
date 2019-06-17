@@ -577,7 +577,6 @@ int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id
   printf("I found the server's identity: %s\n", server_identity);
 
   const unsigned char *found_key = tls_key_dictionary_search(tls_key_dictionary_head, server_identity);
-
   if(found_key == NULL) {
     TLS_LOG_ERROR("Failed to find the key for this server (based on IP address)");
     return 0;
@@ -728,7 +727,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, my_sa_info, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
@@ -796,7 +795,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   strcpy(tls_my_identity, my_sa_info);
 
   // add the key into the directory
-  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, my_sa_info, key);
+  tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
   // start to initialize the SSL connection
