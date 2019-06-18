@@ -747,8 +747,8 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  if(BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
-    || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
+  if(BIO_set_write_buf_size(rbio_with_buf, 256 * 1024) != 1
+    || BIO_set_write_buf_size(wbio_with_buf, 256 * 1024) != 1
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
     TLS_LOG_ERROR("Failed to create a proper BIO buffer");
@@ -845,8 +845,8 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  if(BIO_set_write_buf_size(rbio_with_buf, 65536) != 1
-    || BIO_set_write_buf_size(wbio_with_buf, 65536) != 1
+  if(BIO_set_write_buf_size(rbio_with_buf, 256 * 1024) != 1
+    || BIO_set_write_buf_size(wbio_with_buf, 256 * 1024) != 1
     || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
   ){
     TLS_LOG_ERROR("Failed to create a proper BIO buffer");
