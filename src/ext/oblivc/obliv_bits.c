@@ -961,7 +961,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     }
 
     return NULL;
-  }.
+  }
 
   tls2PTransport* tnew = tls2PNew(newsock, tlst->ssl_ctx, ssl, tlst->isClient, tlst->isProfiled);
   tnew->parent = tlst;
