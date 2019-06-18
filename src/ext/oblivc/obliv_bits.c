@@ -727,6 +727,17 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   tls_key_dictionary_head = tls_key_dictionary_insert(tls_key_dictionary_head, sa_info, key);
   printf("Add the key for this pair of identities to the dictionary.\n");
 
+  char *server_identity_to_store = malloc(sizeof(char) * INET_ADDRSTRLEN);
+  if(server_identity_to_store == NULL){
+    TLS_LOG_ERROR("Failed to reserve space to store the counterpart's IP address");
+    return -1;
+  }
+
+  strcpy(server_identity_to_store, sa_info);
+  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
+
+  printf("The server's IP has been stored.\n");
+
   // start to initialize the SSL connection
   tls_library_init();
   SSL_CTX * ctx = tls_client_get_ctx();
@@ -766,15 +777,6 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
 
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
-
-  char *server_identity_to_store = malloc(sizeof(char) * INET_ADDRSTRLEN);
-  if(server_identity_to_store == NULL){
-    TLS_LOG_ERROR("Failed to reserve space to store the counterpart's IP address");
-    return -1;
-  }
-
-  strcpy(server_identity_to_store, sa_info);
-  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
 
   int error = SSL_do_handshake(ssl);
   if(error != 1){
@@ -900,14 +902,45 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     return NULL;
   }
 
+  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  BIO* wbio_with_buf = BIO_new(BIO_s_bio());
+
+  if(rbio_with_buf == NULL || wbio_with_buf == NULL){
+    TLS_LOG_ERROR("Failed to create the BIO");
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
+    return -1;
+  }
+
+  ssl = SSL_new(tlst->ssl_ctx);
+  SSL_set_fd(ssl, newsock);
+  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+
+  if(BIO_set_write_buf_size(rbio_with_buf, 64 * 1024) != 1
+    || BIO_set_write_buf_size(wbio_with_buf, 64 * 1024) != 1
+    || BIO_make_bio_pair(rbio_with_buf, wbio_with_buf) != 1
+  ){
+    TLS_LOG_ERROR("Failed to create a proper BIO buffer");
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+
+    return -1;
+  }
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+
   SSL *ssl;
   if(tlst->isClient){
-    ssl = SSL_new(tlst->ssl_ctx);
-    SSL_set_fd(ssl, newsock);
     SSL_set_connect_state(ssl);
   }else{
-    ssl = SSL_new(tlst->ssl_ctx);
-    SSL_set_fd(ssl, newsock);
     SSL_set_accept_state(ssl);
   }
 
