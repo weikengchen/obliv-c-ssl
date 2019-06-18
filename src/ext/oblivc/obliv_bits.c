@@ -562,6 +562,7 @@ int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t iden
 }
 
 int tls_psk_client_callback(SSL *ssl, const EVP_MD *md, const unsigned char **id, size_t *idlen, SSL_SESSION **sess){
+  printf("Start looking at the PSK client callback.\n");
   if(tls_my_identity[0] == 0){
     TLS_LOG_ERROR("The client's identity has not yet been initialized.\n");
     return 0;
@@ -945,7 +946,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
   }
 
   if(SSL_do_handshake(ssl) != 1){
-    TLS_LOG_ERROR("Handshake failed");
+    TLS_LOG_ERROR("Handshake failed for split connections");
     return NULL;
   }
 
