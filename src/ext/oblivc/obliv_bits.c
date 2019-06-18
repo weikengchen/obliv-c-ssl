@@ -734,14 +734,14 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   }
 
   strcpy(server_identity_to_store, sa_info);
-  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
-
-  printf("The server's IP has been stored.\n");
 
   // start to initialize the SSL connection
   tls_library_init();
   SSL_CTX * ctx = tls_client_get_ctx();
   SSL *ssl = SSL_new(ctx);
+
+  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
+  printf("The server's IP has been stored.\n");
 
   BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
@@ -914,12 +914,13 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
       printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
     }
 
-    return -1;
+    return NULL;
   }
 
+  SSL *ssl;
   ssl = SSL_new(tlst->ssl_ctx);
   SSL_set_fd(ssl, newsock);
-  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
 
   if(BIO_set_write_buf_size(rbio_with_buf, 64 * 1024) != 1
     || BIO_set_write_buf_size(wbio_with_buf, 64 * 1024) != 1
@@ -933,11 +934,10 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
       printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
     }
 
-    return -1;
+    return NULL;
   }
   SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
 
-  SSL *ssl;
   if(tlst->isClient){
     SSL_set_connect_state(ssl);
   }else{
