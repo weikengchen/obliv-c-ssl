@@ -921,7 +921,10 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
   SSL *ssl;
   ssl = SSL_new(tlst->ssl_ctx);
   SSL_set_fd(ssl, newsock);
-  SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+
+  if(tlst->isClient){
+    SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+  }
 
   if(BIO_set_write_buf_size(rbio_with_buf, 64 * 1024) != 1
     || BIO_set_write_buf_size(wbio_with_buf, 64 * 1024) != 1
@@ -958,7 +961,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     }
 
     return NULL;
-  }
+  }.
 
   tls2PTransport* tnew = tls2PNew(newsock, tlst->ssl_ctx, ssl, tlst->isClient, tlst->isProfiled);
   tnew->parent = tlst;
