@@ -947,6 +947,15 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
 
   if(SSL_do_handshake(ssl) != 1){
     TLS_LOG_ERROR("Handshake failed for split connections");
+
+    printf("The error number returned by SSL is: %d\n", SSL_get_error(ssl, error));
+
+    char error_string[256];
+    int err_in_queue;
+    while(err_in_queue = ERR_get_error()){
+      printf("An error in the queue: %s\n", ERR_error_string(err_in_queue, error_string));
+    }
+    
     return NULL;
   }
 
