@@ -394,7 +394,7 @@ static int tls2PSend(ProtocolTransport* pt, int dest, const void* s, size_t n){
   size_t n2 = 0;
   tlst->needFlush = true;
   while(n > n2) {
-    int res = SSL_write(tlst->ssl_socket, ((char*)s) + n2, n - n2);
+    int res = BIO_write(SSL_get_wbio(tlst->ssl_socket), ((char*)s) + n2, n - n2);
     if(res < 0) { perror("TLS write error: "); return res; }
     n2 += res;
   }
@@ -417,7 +417,7 @@ static int tls2PRecv(ProtocolTransport* pt, int src, void* s, size_t n){
   }
 
   while(n > n2) {
-    res = SSL_read(tlst->ssl_socket, ((char*)s) + n2, n - n2);
+    res = BIO_read(SSL_get_rbio(tlst->ssl_socket), ((char*)s) + n2, n - n2);
     if(res < 0 || BIO_eof(SSL_get_rbio(tlst->ssl_socket))) {
       perror("TLS read error: ");
       return res;
@@ -708,6 +708,9 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   if(getsockaddr(server, port, (struct sockaddr*)&sa) < 0) return -1; // dns error
   int sock = tcpConnect(&sa); if(sock < 0) return -1;
 
+  const int one = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
+
   // send the sa information
   char sa_info[INET_ADDRSTRLEN];
   memset(sa_info, 0, INET_ADDRSTRLEN);
@@ -802,6 +805,9 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   int listenSock, sock;
   listenSock = tcpListenAny(port);
   if((sock = accept(listenSock, 0, 0)) < 0) return -1;
+
+  const int one = 1;
+  setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(one));
 
   // obtain and send the sa information
   char sa_info[INET_ADDRSTRLEN];
