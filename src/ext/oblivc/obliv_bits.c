@@ -443,7 +443,6 @@ static void tls2PCleanup(ProtocolTransport* pt){
   BIO_flush(SSL_get_wbio(tlst->ssl_socket));
   if(!tlst->keepAlive){
     SSL_shutdown(tlst->ssl_socket);
-    shutdown(tlst->sock, SD_SEND);
     close(tlst->sock);
   }
   SSL_free(tlst->ssl_socket);
