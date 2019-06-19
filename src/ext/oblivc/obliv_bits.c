@@ -532,7 +532,7 @@ tls_key_dictionary* tls_key_dictionary_insert(tls_key_dictionary *head, const ch
 
 int tls_psk_server_callback(SSL *ssl, const unsigned char *identity, size_t identity_len, SSL_SESSION **sess){
 	char identity_end_with_zero[identity_len + 1];
-	memset(identity_end_with_zero, 0, identity_len);
+	memset(identity_end_with_zero, 0, identity_len + 1);
 	memcpy(identity_end_with_zero, identity, identity_len);
 
   printf("Someone asks me for a key for the identity %s\n", identity_end_with_zero);
