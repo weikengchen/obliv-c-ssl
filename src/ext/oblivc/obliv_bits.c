@@ -903,6 +903,16 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     return NULL;
   }
 
+  SSL *ssl;
+  tls_library_init();
+  ssl = SSL_new(tlst->ssl_ctx);
+
+  if(tlst->isClient){
+    SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+
+    printf("Try to write the extra data: %s\n", SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
+  }
+
   BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
@@ -916,14 +926,6 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     }
 
     return NULL;
-  }
-
-  SSL *ssl;
-  ssl = SSL_new(tlst->ssl_ctx);
-  SSL_set_fd(ssl, newsock);
-
-  if(tlst->isClient){
-    SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
   }
 
   if(BIO_set_write_buf_size(rbio_with_buf, 64 * 1024) != 1
@@ -941,6 +943,8 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
     return NULL;
   }
   SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+
+  SSL_set_fd(ssl, newsock);
 
   if(tlst->isClient){
     SSL_set_connect_state(ssl);
