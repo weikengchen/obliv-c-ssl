@@ -443,6 +443,7 @@ static void tls2PCleanup(ProtocolTransport* pt){
   BIO_flush(SSL_get_wbio(tlst->ssl_socket));
   if(!tlst->keepAlive){
     SSL_shutdown(tlst->ssl_socket);
+    shutdown(tlst->sock, SD_SEND);
     close(tlst->sock);
   }
   SSL_free(tlst->ssl_socket);
@@ -747,7 +748,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
   SSL_set_ex_data(ssl, TLS_EX_DATA_INDEX_OTHER_PARTY_IP, server_identity_to_store);
   printf("The server's IP has been stored.\n");
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  /*BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
@@ -777,7 +778,7 @@ int protocolConnectTLS2P(ProtocolDesc* pd, const char* server, const char* port,
     return -1;
   }
 
-  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);*/
 
   SSL_set_fd(ssl, sock);
   SSL_set_connect_state(ssl);
@@ -839,7 +840,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
   SSL_CTX * ctx = tls_server_get_ctx();
   SSL *ssl = SSL_new(ctx);
 
-  BIO* rbio_with_buf = BIO_new(BIO_s_bio());
+  /*BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
   if(rbio_with_buf == NULL || wbio_with_buf == NULL){
@@ -869,7 +870,7 @@ int protocolAcceptTLS2P(ProtocolDesc* pd, const char* port, const unsigned char 
     return -1;
   }
 
-  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);*/
 
   SSL_set_fd(ssl, sock);
   SSL_set_accept_state(ssl);
@@ -918,7 +919,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
 
     printf("Try to write the extra data: %s\n", SSL_get_ex_data(tlst->ssl_socket, TLS_EX_DATA_INDEX_OTHER_PARTY_IP));
   }
-
+/*
   BIO* rbio_with_buf = BIO_new(BIO_s_bio());
   BIO* wbio_with_buf = BIO_new(BIO_s_bio());
 
@@ -948,7 +949,7 @@ static ProtocolTransport* tls2PSplit(ProtocolTransport* tsrc){
 
     return NULL;
   }
-  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);
+  SSL_set_bio(ssl, rbio_with_buf, wbio_with_buf);*/
 
   SSL_set_fd(ssl, newsock);
 
